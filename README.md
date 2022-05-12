@@ -1,2 +1,2 @@
 # backbone
-Backtesting engine for personal portfolio
+backtesting engine for personal portfolio
