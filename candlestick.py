@@ -1,5 +1,7 @@
 # Derived from Plotly Dash tutorial
 
+from portfolio import StockData
+
 from dash import Dash, dcc, html, Input, Output
 import plotly.graph_objects as go
 import pandas as pd
@@ -7,13 +9,13 @@ import dash_daq as daq
 import yfinance as yf
 
 default_tickers = ['AMD', 'PLTR']
+_start = '2020-01-01'
+_end = '2022-01-01'
 
 app = Dash(__name__)
 
-df = yf.download(default_tickers, start='2020-01-01',
-                 end='2022-01-01')  # create global ticker collection
-
-# TODO: only append and remove data columns - don't redownload everything 
+stocks = {ticker: StockData(ticker, _start, _end)
+          for ticker in default_tickers}
 
 app.layout = html.Div([
     # NOTE: can't set this if none
@@ -36,7 +38,6 @@ app.layout = html.Div([
         multi=True,
         id='dropdown'
     ),
-    dcc.Graph(id='test-graph'),
     html.P(id='dummy')
 ])
 
@@ -53,10 +54,14 @@ def update_output(value):
     Output('dummy', 'children'),
     Input('dropdown', 'value')
 )
-def update_tickers(tickers):
-    # TODO: format headers
-    global df
-    df = yf.download(tickers, start='2020-01-01', end='2022-01-01')
+def update_tickers(values):
+    global stocks
+    diff = set(stocks.keys()).difference(values)
+    for val in diff:
+        stocks.pop(val)
+
+    for val in set(stocks.keys()).symmetric_difference(values):
+        stocks[val] = StockData(val, _start, _end)
 
 # @app.callback(
 #     Output('test-graph', 'figure'),
@@ -74,17 +79,17 @@ def update_tickers(tickers):
 #     return go.Figure(go.Candlestick)
 
 def multiplot():
-    return [go.Scatter(x=df.index, y=df['Adj Close'][stock], name=stock)
-            for stock in df.columns.get_level_values(1).unique()]
-            # TODO: get_level_values(1) doens't work with single stock
+    global stocks
+    return [go.Scatter(x=v.df.index, y=v.df['Adj Close'], name=k) for (k, v) in stocks.items()]
 
 
 @app.callback(
     Output("graph", "figure"),
     Input("toggle-rangeslider", "value"),
-    Input('my-toggle', 'value')
+    Input('my-toggle', 'value'),
+    Input('dropdown', 'value')
 )
-def display_figure(value, toggle):
+def display_figure(value, toggle, drop):
     # TODO: replace with your own data source
     df = pd.read_csv(
         'https://raw.githubusercontent.com/plotly/datasets/master/finance-charts-apple.csv')
@@ -109,7 +114,6 @@ def display_figure(value, toggle):
     )
 
     fig.update_layout(layout)
-
     return fig
 
 
