@@ -30,7 +30,6 @@ app.layout = html.Div([
         value=['slider']
     ),
     dcc.Graph(id="graph"),
-    # TODO: grab value - pull using yf API - graph together
     # TODO: graph adj close and pct change - toggle switch
     dcc.Dropdown(
         ['PLTR', 'SPY', 'AMD'],
@@ -50,10 +49,6 @@ def update_output(value):
     return 'The switch is {}.'.format(value)
 
 
-@app.callback(
-    Output('dummy', 'children'),
-    Input('dropdown', 'value')
-)
 def update_tickers(values):
     global stocks
     diff = set(stocks.keys()).difference(values)
@@ -63,22 +58,12 @@ def update_tickers(values):
     for val in set(stocks.keys()).symmetric_difference(values):
         stocks[val] = StockData(val, _start, _end)
 
-# @app.callback(
-#     Output('test-graph', 'figure'),
-#     Input('my-toggle', 'value')
-# )
-# def switch_graph(value):
-#     # switch from candlestick to adj-close graph for selected values
-#     df = pd.read_csv('https://raw.githubusercontent.com/plotly/datasets/master/finance-charts-apple.csv')
-#     fig =
-
-
 # def candlestick(ticker):
 #     ''' takes SINGLE stock name and returns a candlestick graph '''
 #     yf.download()
 #     return go.Figure(go.Candlestick)
 
-def multiplot():
+def line():
     global stocks
     return [go.Scatter(x=v.df.index, y=v.df['Adj Close'], name=k) for (k, v) in stocks.items()]
 
@@ -88,9 +73,12 @@ def multiplot():
     Input("toggle-rangeslider", "value"),
     Input('my-toggle', 'value'),
     Input('dropdown', 'value')
+    # TODO: this doens't update unless the toggle is hit
 )
-def display_figure(value, toggle, drop):
+def display_figure(value, toggle, dropdown):
     # TODO: replace with your own data source
+    update_tickers(dropdown)
+
     df = pd.read_csv(
         'https://raw.githubusercontent.com/plotly/datasets/master/finance-charts-apple.csv')
     if toggle:
@@ -102,14 +90,14 @@ def display_figure(value, toggle, drop):
             close=df['AAPL.Close']
         )
     else:
-        graph = multiplot()
+        graph = line()
 
     fig = go.Figure(graph)
 
     layout = go.Layout(
         # TODO: tweak background and paper colors
         paper_bgcolor='rgba(0,0,0,0.1)',
-        plot_bgcolor='rgba(0,0,0,0.1)',
+        plot_bgcolor='rgba(4, 16, 28, 0.8)',
         xaxis_rangeslider_visible='slider' in value
     )
 
